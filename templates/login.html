@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Disconnection Monitor - Login</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #1a237e; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    .card { background: white; padding: 40px; border-radius: 10px; width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    h2 { text-align: center; color: #1a237e; margin-bottom: 8px; }
+    p.subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 24px; }
+    label { display: block; font-size: 13px; color: #333; margin-bottom: 4px; }
+    input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 16px; }
+    button { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
+    button:hover { background: #283593; }
+    .error { background: #ffebee; color: #c62828; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Disconnection Monitor</h2>
+    <p class="subtitle">Real-time Status Tracking System</p>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="POST">
+      <label>Username</label>
+      <input type="text" name="username" required autofocus>
+      <label>Password</label>
+      <input type="password" name="password" required>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+</body>
+</html>

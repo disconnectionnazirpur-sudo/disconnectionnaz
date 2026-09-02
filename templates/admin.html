@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; }
+    header { background: #1a237e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 18px; }
+    header nav a { color: #90caf9; font-size: 13px; text-decoration: none; margin-left: 16px; }
+    .container { padding: 20px 24px; }
+    .summary { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .card { background: white; border-radius: 8px; padding: 16px 20px; flex: 1; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+    .card .num { font-size: 32px; font-weight: bold; }
+    .card .lbl { font-size: 12px; color: #666; margin-top: 4px; }
+    .card.total .num { color: #1a237e; }
+    .card.disc .num { color: #e53935; }
+    .card.paid .num { color: #43a047; }
+    .card.disp .num { color: #fb8c00; }
+    .toolbar { background: white; border-radius: 8px; padding: 14px 20px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .toolbar label { font-size: 12px; display: block; margin-bottom: 3px; color: #555; }
+    .toolbar select, .toolbar input { padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+    .toolbar button { padding: 7px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .import-form { background: white; border-radius: 8px; padding: 14px 20px; margin-bottom: 14px; display: flex; gap: 12px; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); flex-wrap: wrap; }
+    .import-form label { font-size: 13px; font-weight: bold; color: #333; }
+    .import-form button { padding: 7px 14px; background: #43a047; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .live { font-size: 12px; color: #43a047; margin-left: auto; align-self: center; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); font-size: 12px; }
+    th { background: #1a237e; color: white; padding: 9px 10px; text-align: left; white-space: nowrap; }
+    td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:hover td { background: #f5f5f5; }
+    .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+    .badge.Disconnected { background: #ffebee; color: #c62828; }
+    .badge.Paid { background: #e8f5e9; color: #2e7d32; }
+    .badge.Dispute { background: #fff3e0; color: #e65100; }
+    .badge.Pending { background: #e3f2fd; color: #1565c0; }
+    .badge.nan { background: #f5f5f5; color: #999; }
+    select.status-select { padding: 3px 6px; border-radius: 5px; border: 1px solid #ccc; font-size: 11px; }
+    .save-btn { padding: 3px 8px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; margin-left: 3px; }
+    .img-thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid #ccc; }
+    .img-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.75); z-index: 1000; justify-content: center; align-items: center; }
+    .img-modal.active { display: flex; }
+    .img-modal-box { background: white; border-radius: 10px; padding: 20px; max-width: 520px; width: 92%; text-align: center; }
+    .img-modal-box img { max-width: 100%; max-height: 380px; border-radius: 6px; margin-bottom: 14px; }
+    #live-dot { display: inline-block; width: 8px; height: 8px; background: #43a047; border-radius: 50%; margin-right: 4px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Disconnection Monitor - Admin Dashboard</h1>
+  <nav>
+    <span id="live-dot"></span><span style="font-size:12px">Live</span>
+    <a href="/admin/reports">Reports</a>
+    <a href="/admin/users">Manage Users</a>
+    <a href="/logout">Logout</a>
+  </nav>
+</header>
+<div class="container">
+  <div class="summary">
+    <div class="card total"><div class="num" id="s-total">-</div><div class="lbl">Total Accounts</div></div>
+    <div class="card disc"><div class="num" id="s-disc">-</div><div class="lbl">Disconnected</div></div>
+    <div class="card paid"><div class="num" id="s-paid">-</div><div class="lbl">Paid</div></div>
+    <div class="card disp"><div class="num" id="s-disp">-</div><div class="lbl">Dispute</div></div>
+  </div>
+
+  <div class="import-form">
+    <label>Import Excel:</label>
+    <form method="POST" action="/admin/import" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="file" name="excel_file" accept=".xlsx,.xls" required>
+      <button type="submit">Upload &amp; Import</button>
+    </form>
+  </div>
+
+  <div class="toolbar">
+    <div>
+      <label>Search (ID / Name / Meter / Mobile)</label>
+      <input type="text" id="f-search" placeholder="Type to search..." oninput="fetchData()" style="width:210px">
+    </div>
+    <div>
+      <label>Agency</label>
+      <select id="f-agency" onchange="fetchData()">
+        <option value="">All Agencies</option>
+        {% for a in agencies %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Class</label>
+      <select id="f-class" onchange="fetchData()">
+        <option value="">All Classes</option>
+        {% for c in classes %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Status</label>
+      <select id="f-status" onchange="fetchData()">
+        <option value="">All Status</option>
+        <option>Disconnected</option>
+        <option>Paid</option>
+        <option>Dispute</option>
+        <option>Pending</option>
+      </select>
+    </div>
+    <div>
+      <label>Due Period</label>
+      <input type="text" id="f-period" placeholder="e.g. SEP 2026" oninput="fetchData()" style="width:120px">
+    </div>
+    <button onclick="clearFilters()" style="background:#757575;color:white">Clear</button>
+    <span class="live" id="last-updated"></span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Contract Account</th>
+        <th>Name</th>
+        <th>Address</th>
+        <th>Total Due</th>
+        <th>Current Due</th>
+        <th>Due Period</th>
+        <th>Meter Unit</th>
+        <th>Class</th>
+        <th>Mobile</th>
+        <th>Updated Mobile</th>
+        <th>Agency</th>
+        <th>Status</th>
+        <th>Image</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody id="table-body">
+      <tr><td colspan="15" style="text-align:center;padding:20px;color:#999">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Image View Modal -->
+<div class="img-modal" id="img-modal">
+  <div class="img-modal-box">
+    <h4 style="margin-bottom:12px;color:#333">Status Image</h4>
+    <img id="img-modal-img" src="" alt="Status Image">
+    <button onclick="document.getElementById('img-modal').classList.remove('active')" style="padding:7px 20px;background:#ccc;border:none;border-radius:6px;cursor:pointer;font-size:13px">Close</button>
+  </div>
+</div>
+
+<script>
+  function fetchData() {
+    var search = document.getElementById('f-search').value;
+    var agency = document.getElementById('f-agency').value;
+    var cls    = document.getElementById('f-class').value;
+    var status = document.getElementById('f-status').value;
+    var period = document.getElementById('f-period').value;
+    var url = '/admin/data'
+      + '?search='        + encodeURIComponent(search)
+      + '&agency='        + encodeURIComponent(agency)
+      + '&account_class=' + encodeURIComponent(cls)
+      + '&status='        + encodeURIComponent(status)
+      + '&period='        + encodeURIComponent(period);
+
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        document.getElementById('s-total').textContent = data.summary.total;
+        document.getElementById('s-disc').textContent  = data.summary.disconnected;
+        document.getElementById('s-paid').textContent  = data.summary.paid;
+        document.getElementById('s-disp').textContent  = data.summary.dispute;
+
+        var tbody = document.getElementById('table-body');
+        if (!data.accounts.length) {
+          tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:20px;color:#999">No records found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.accounts.map(function(a, i) {
+          var imgCell = a.has_image
+            ? '<img class="img-thumb" src="' + a.status_image + '" onclick="viewImg(this.src)" title="Click to view">'
+            : '<span style="color:#ccc;font-size:11px">None</span>';
+
+          return '<tr>'
+            + '<td>' + (i+1) + '</td>'
+            + '<td>' + a.contract_account + '</td>'
+            + '<td>' + a.name + '</td>'
+            + '<td>' + a.address + '</td>'
+            + '<td><strong>' + a.total_due + '</strong></td>'
+            + '<td>' + a.current_due + '</td>'
+            + '<td>' + a.due_period + '</td>'
+            + '<td>' + a.meter_reading_unit + '</td>'
+            + '<td>' + a.account_class + '</td>'
+            + '<td>' + a.mobile_no + '</td>'
+            + '<td>' + (a.updated_mobile ? '<strong style="color:#1565c0">' + a.updated_mobile + '</strong>' : '<span style="color:#ccc">-</span>') + '</td>'
+            + '<td>' + a.agency + '</td>'
+            + '<td>'
+              + '<select class="status-select" id="adst-' + a.id + '">'
+              + '<option' + (a.status==='Disconnected'?' selected':'') + '>Disconnected</option>'
+              + '<option' + (a.status==='Paid'?' selected':'') + '>Paid</option>'
+              + '<option' + (a.status==='Dispute'?' selected':'') + '>Dispute</option>'
+              + '<option' + (a.status==='Pending'?' selected':'') + '>Pending</option>'
+              + '</select>'
+              + '<button class="save-btn" onclick="saveStatus(' + a.id + ')">Save</button>'
+            + '</td>'
+            + '<td>' + imgCell + '</td>'
+            + '<td>' + a.updated_at + '</td>'
+            + '</tr>';
+        }).join('');
+
+        document.getElementById('last-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+      });
+  }
+
+  function saveStatus(id) {
+    var status = document.getElementById('adst-' + id).value;
+    fetch('/admin/update_status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, status: status })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.success) fetchData();
+    });
+  }
+
+  function viewImg(src) {
+    document.getElementById('img-modal-img').src = src;
+    document.getElementById('img-modal').classList.add('active');
+  }
+
+  function clearFilters() {
+    document.getElementById('f-search').value = '';
+    document.getElementById('f-agency').value = '';
+    document.getElementById('f-class').value  = '';
+    document.getElementById('f-status').value = '';
+    document.getElementById('f-period').value = '';
+    fetchData();
+  }
+
+  fetchData();
+  setInterval(fetchData, 5000);
+</script>
+</body>
+</html>

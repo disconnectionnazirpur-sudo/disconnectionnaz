@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Agency Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; }
+    header { background: #283593; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 18px; }
+    header a { color: #90caf9; font-size: 13px; text-decoration: none; }
+    .container { padding: 20px 24px; }
+    .info-bar { background: white; border-radius: 8px; padding: 12px 20px; margin-bottom: 16px; font-size: 13px; color: #555; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .toolbar { background: white; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .toolbar label { font-size: 12px; display: block; margin-bottom: 4px; color: #555; }
+    .toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+    .toolbar input.search-input { min-width: 180px; }
+    .toolbar button { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-blue { background: #283593; color: white; }
+    .btn-gray { background: #757575; color: white; }
+    .result-count { font-size: 12px; color: #888; align-self: center; margin-left: auto; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); font-size: 12px; }
+    th { background: #283593; color: white; padding: 9px 10px; text-align: left; white-space: nowrap; }
+    td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:hover td { background: #f5f5f5; }
+    .highlight { background: #fff9c4; font-weight: bold; }
+    select.status-select { padding: 4px 6px; border-radius: 5px; border: 1px solid #ccc; font-size: 12px; }
+    .save-btn { padding: 4px 10px; background: #283593; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; margin-left: 4px; }
+    .mobile-input { padding: 4px 6px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px; width: 110px; }
+    .save-mobile-btn { padding: 4px 8px; background: #43a047; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; margin-left: 4px; }
+    .img-btn { padding: 4px 8px; background: #fb8c00; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; }
+    .img-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid #ccc; }
+    .toast { position: fixed; bottom: 24px; right: 24px; color: white; padding: 12px 20px; border-radius: 8px; font-size: 13px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 999; }
+    /* Image Modal */
+    .img-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+    .img-modal.active { display: flex; }
+    .img-modal-box { background: white; border-radius: 10px; padding: 20px; max-width: 500px; width: 90%; text-align: center; }
+    .img-modal-box img { max-width: 100%; max-height: 360px; border-radius: 6px; margin-bottom: 12px; }
+    .img-modal-box h4 { margin-bottom: 12px; color: #333; font-size: 14px; }
+    .img-modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .img-modal-actions button { padding: 7px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    #live-dot { display: inline-block; width: 8px; height: 8px; background: #90caf9; border-radius: 50%; margin-right: 4px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Disconnection Monitor - Agency: {{ agency_name }}</h1>
+  <div><span id="live-dot"></span><span style="font-size:12px">Live</span> &nbsp;&nbsp; <a href="/logout">Logout</a></div>
+</header>
+<div class="container">
+  <div class="info-bar">You can update <strong>Status</strong>, <strong>Mobile No</strong>, and upload a <strong>Status Image</strong> for each account.</div>
+
+  <!-- Toolbar: Search + Filter + Sort -->
+  <div class="toolbar">
+    <div>
+      <label>Search By</label>
+      <select id="search-type">
+        <option value="all">All Fields</option>
+        <option value="contract">Contract Account (Consumer ID)</option>
+        <option value="meter">Meter Reading Unit</option>
+        <option value="name">Consumer Name</option>
+        <option value="mobile">Mobile No</option>
+      </select>
+    </div>
+    <div>
+      <label>Keyword</label>
+      <input type="text" class="search-input" id="search-input" placeholder="Type to search..." oninput="applyFilters()">
+    </div>
+    <div>
+      <label>Filter by Class</label>
+      <select id="filter-class" onchange="applyFilters()">
+        <option value="">All Classes</option>
+      </select>
+    </div>
+    <div>
+      <label>Sort by OSD (Total Due)</label>
+      <select id="sort-osd" onchange="applyFilters()">
+        <option value="">No Sort</option>
+        <option value="desc">Highest First</option>
+        <option value="asc">Lowest First</option>
+      </select>
+    </div>
+    <button class="btn-gray" onclick="clearFilters()">Clear</button>
+    <span class="result-count" id="result-count"></span>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th>#</th>
+      <th>Contract Account</th>
+      <th>Name</th>
+      <th>Address</th>
+      <th>Total Due (OSD)</th>
+      <th>Current Due</th>
+      <th>Due Period</th>
+      <th>Meter Unit</th>
+      <th>Class</th>
+      <th>Original Mobile</th>
+      <th>Updated Mobile</th>
+      <th>Status</th>
+      <th>Image</th>
+      <th>Updated</th>
+    </tr></thead>
+    <tbody id="table-body"><tr><td colspan="14" style="text-align:center;padding:20px;color:#999">Loading...</td></tr></tbody>
+  </table>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Image View/Upload Modal -->
+<div class="img-modal" id="img-modal">
+  <div class="img-modal-box">
+    <h4 id="img-modal-title">Status Image</h4>
+    <div id="img-preview-wrap"></div>
+    <div class="img-modal-actions">
+      <label style="padding:7px 16px;background:#fb8c00;color:white;border-radius:6px;cursor:pointer;font-size:13px">
+        Upload Image
+        <input type="file" id="img-file-input" accept="image/*" style="display:none" onchange="submitImage()">
+      </label>
+      <button id="img-delete-btn" style="background:#e53935;color:white;display:none" onclick="deleteImage()">Remove Image</button>
+      <button style="background:#ccc;color:#333" onclick="closeImgModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var allAccounts = [];
+  var currentImgId = null;
+
+  function fetchData() {
+    fetch('/agency/data').then(function(r){ return r.json(); }).then(function(data) {
+      allAccounts = data.accounts;
+      populateClassFilter();
+      applyFilters();
+    });
+  }
+
+  function populateClassFilter() {
+    var sel = document.getElementById('filter-class');
+    var current = sel.value;
+    var classes = [];
+    allAccounts.forEach(function(a) { if (a.account_class && classes.indexOf(a.account_class) === -1) classes.push(a.account_class); });
+    classes.sort();
+    sel.innerHTML = '<option value="">All Classes</option>';
+    classes.forEach(function(c) { sel.innerHTML += '<option value="'+c+'"'+(c===current?' selected':'')+'>'+c+'</option>'; });
+  }
+
+  function applyFilters() {
+    var keyword = document.getElementById('search-input').value.trim().toLowerCase();
+    var type = document.getElementById('search-type').value;
+    var cls = document.getElementById('filter-class').value;
+    var sort = document.getElementById('sort-osd').value;
+
+    var filtered = allAccounts.filter(function(a) {
+      var matchClass = !cls || a.account_class === cls;
+      var matchSearch = true;
+      if (keyword) {
+        if (type === 'contract') matchSearch = a.contract_account.toLowerCase().includes(keyword);
+        else if (type === 'meter') matchSearch = a.meter_reading_unit.toLowerCase().includes(keyword);
+        else if (type === 'name') matchSearch = a.name.toLowerCase().includes(keyword);
+        else if (type === 'mobile') matchSearch = a.mobile_no.toLowerCase().includes(keyword) || a.updated_mobile.toLowerCase().includes(keyword);
+        else matchSearch = a.contract_account.toLowerCase().includes(keyword) || a.meter_reading_unit.toLowerCase().includes(keyword) || a.name.toLowerCase().includes(keyword) || a.mobile_no.toLowerCase().includes(keyword);
+      }
+      return matchClass && matchSearch;
+    });
+
+    if (sort) {
+      filtered.sort(function(a, b) {
+        var va = parseFloat(String(a.total_due).replace(/[^0-9.]/g, '')) || 0;
+        var vb = parseFloat(String(b.total_due).replace(/[^0-9.]/g, '')) || 0;
+        return sort === 'desc' ? vb - va : va - vb;
+      });
+    }
+
+    renderTable(filtered, keyword);
+  }
+
+  function highlight(text, keyword) {
+    if (!keyword) return text;
+    var escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return String(text).replace(new RegExp('(' + escaped + ')', 'gi'), '<span class="highlight">$1</span>');
+  }
+
+  function renderTable(accounts, keyword) {
+    var kw = keyword || '';
+    document.getElementById('result-count').textContent = accounts.length + ' record(s)';
+    var tbody = document.getElementById('table-body');
+    if (!accounts.length) {
+      tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:20px;color:#999">No records found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = accounts.map(function(a, i) {
+      var imgCell = a.has_image
+        ? '<img class="img-thumb" src="'+a.status_image+'" onclick="openImgModal('+a.id+', true, this.src)" title="View image">'
+        : '<button class="img-btn" onclick="openImgModal('+a.id+', false, \'\')">Upload</button>';
+      return '<tr>' +
+        '<td>'+(i+1)+'</td>' +
+        '<td>'+highlight(a.contract_account, kw)+'</td>' +
+        '<td>'+highlight(a.name, kw)+'</td>' +
+        '<td>'+a.address+'</td>' +
+        '<td><strong>'+a.total_due+'</strong></td>' +
+        '<td>'+a.current_due+'</td>' +
+        '<td>'+a.due_period+'</td>' +
+        '<td>'+highlight(a.meter_reading_unit, kw)+'</td>' +
+        '<td>'+a.account_class+'</td>' +
+        '<td>'+highlight(a.mobile_no, kw)+'</td>' +
+        '<td><input class="mobile-input" id="mob-'+a.id+'" value="'+a.updated_mobile+'" placeholder="New mobile"><button class="save-mobile-btn" onclick="saveMobile('+a.id+')">Save</button></td>' +
+        '<td>' +
+          '<select class="status-select" id="st-'+a.id+'">' +
+          '<option'+(a.status==='Disconnected'?' selected':'')+'>Disconnected</option>' +
+          '<option'+(a.status==='Paid'?' selected':'')+'>Paid</option>' +
+          '<option'+(a.status==='Dispute'?' selected':'')+'>Dispute</option>' +
+          '</select>' +
+          '<button class="save-btn" onclick="saveStatus('+a.id+')">Save</button>' +
+        '</td>' +
+        '<td>'+imgCell+'</td>' +
+        '<td>'+a.updated_at+'</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function clearFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-type').value = 'all';
+    document.getElementById('filter-class').value = '';
+    document.getElementById('sort-osd').value = '';
+    applyFilters();
+  }
+
+  function saveStatus(id) {
+    var status = document.getElementById('st-'+id).value;
+    fetch('/agency/update_status', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:id, status:status}) })
+      .then(function(r){ return r.json(); }).then(function(d){ if(d.success) showToast('Status updated!', '#43a047'); });
+  }
+
+  function saveMobile(id) {
+    var mobile = document.getElementById('mob-'+id).value;
+    fetch('/agency/update_mobile', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:id, mobile:mobile}) })
+      .then(function(r){ return r.json(); }).then(function(d){ if(d.success) showToast('Mobile updated!', '#1565c0'); });
+  }
+
+  function openImgModal(id, hasImage, imgSrc) {
+    currentImgId = id;
+    document.getElementById('img-modal-title').textContent = hasImage ? 'Status Image' : 'Upload Status Image';
+    var wrap = document.getElementById('img-preview-wrap');
+    wrap.innerHTML = hasImage ? '<img src="'+imgSrc+'">' : '<p style="color:#999;margin-bottom:12px">No image uploaded yet.</p>';
+    document.getElementById('img-delete-btn').style.display = hasImage ? 'inline-block' : 'none';
+    document.getElementById('img-file-input').value = '';
+    document.getElementById('img-modal').classList.add('active');
+  }
+
+  function closeImgModal() {
+    document.getElementById('img-modal').classList.remove('active');
+    currentImgId = null;
+  }
+
+  function submitImage() {
+    var file = document.getElementById('img-file-input').files[0];
+    if (!file) return;
+    var fd = new FormData();
+    fd.append('id', currentImgId);
+    fd.append('image', file);
+    fetch('/agency/upload_image', { method:'POST', body:fd })
+      .then(function(r){ return r.json(); }).then(function(d) {
+        if (d.success) { showToast('Image uploaded!', '#fb8c00'); closeImgModal(); fetchData(); }
+        else showToast(d.error || 'Upload failed', '#e53935');
+      });
+  }
+
+  function deleteImage() {
+    if (!confirm('Remove this image?')) return;
+    fetch('/agency/delete_image', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:currentImgId}) })
+      .then(function(r){ return r.json(); }).then(function(d) {
+        if (d.success) { showToast('Image removed.', '#e53935'); closeImgModal(); fetchData(); }
+      });
+  }
+
+  function showToast(msg, color) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = color || '#43a047';
+    t.style.display = 'block';
+    setTimeout(function(){ t.style.display = 'none'; }, 2500);
+  }
+
+  fetchData();
+  setInterval(fetchData, 5000);
+</script>
+</body>
+</html>
